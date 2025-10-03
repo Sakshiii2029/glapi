@@ -1,0 +1,54 @@
+/* glapi.h : single-header OpenGL API header and loader
+ *
+ *  profile : {_PROFILE_}
+ *  version : {_VERSION_}
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+#if defined (__cplusplus)
+# pragma once
+#endif /* __cplusplus */
+#if !defined (_glapi_h_)
+# define _glapi_h_
+#
+# if !defined (GLAPI)
+#  define GLAPI extern
+# endif /* GLAPI */
+#
+# if !defined (GLAPIENTRY)
+#  define GLAPIENTRY
+# endif /* GLAPIENTRY */
+#
+# if !defined (APIENTRY)
+#  define APIENTRY
+# endif /* APIENTRY */
+
+{_GL_API_DEC_}
+
+{_API_DEC_}
+
+/* SECTION:
+ *  Implementation
+ * */
+
+# if defined (GLAPI_IMPLEMENTATION)
+#  include <stdio.h>
+#  include <stddef.h>
+#  include <stdint.h>
+#  include <stdlib.h>
+#  if defined (__linux__)
+#   include <dlfcn.h>
+#   include <unistd.h>
+#  endif /* __linux__ */
+#  if defined (_WIN32)
+#   include <Windows.h>
+#  endif /* _WIN32 */
+
+{_API_STATIC_}
+
+{_API_DEF_}
+
+{_GL_API_DEF_}
+
+# endif /* GLAPI_IMPLEMENTATION */
+#endif /* _glapi_h_ */

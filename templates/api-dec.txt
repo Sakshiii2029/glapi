@@ -1,0 +1,3 @@
+GLAPI int   glapiLoadGL(void);
+GLAPI int   glapiLoadGLLoader(void *(*)(const char *));
+GLAPI int   glapiUnloadGL(void);

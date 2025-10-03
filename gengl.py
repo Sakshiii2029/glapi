@@ -111,11 +111,15 @@ class GLSpec:
         # NOTE(yakub):
         #  We're parsing OpenGL and OpenGL ES from the xml file
         self._gl_feat_l = self.__parseFeatures(root, 'gl')
-        self._gles1_feat_l = self.__parseFeatures(root, 'gles1')
-        self._gles2_feat_l = self.__parseFeatures(root, 'gles2')
         self.__filterFeatures(self._gl_feat_l)
-        self.__filterFeatures(self._gles1_feat_l)
-        self.__filterFeatures(self._gles2_feat_l)
+        # TODO(yakub):
+        #  Uncomment those when you'll figure out how to store
+        #  OpenGL ES modules...
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        # self._gles1_feat_l = self.__parseFeatures(root, 'gles1')
+        # self.__filterFeatures(self._gles1_feat_l)
+        # self._gles2_feat_l = self.__parseFeatures(root, 'gles2')
+        # self.__filterFeatures(self._gles2_feat_l)
 
     # SECTION: Features
     # # # # # # # # # #
@@ -269,8 +273,26 @@ class GLLoader:
     # # # # # # # # # #
     _spec: GLSpec = None
 
+    # Private template files
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    # List of templates:
+    # > _PROFILE_       : OpenGL profile (g_settings['profile'])
+    # > _VERSION_       : OpenGL version (g_settings['version'])
+    # > _API_DEC_       : our own API definitions (api-dec.txt)
+    # > _API_DEF_       : our own API declarations (api-def.txt)
+    # > _API_STATIC_    : our own static functions (api-static.txt)
+    # > _GL_API_DEC_    : OpenGL api declarations (extern declarations)
+    # > _GL_API_DEF_    : OpenGL api definitions (regular declarations)
+    # > _GL_API_IMPL_   : implementation part of OpenGL loading
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    _t_loader: str = None
+    _t_api_def: str = None
+    _t_api_dec: str = None
+    _t_api_static: str = None
+
     def __init__(self, spec: GLSpec):
         self._spec = spec
+        self.__resolveTemplates()
         self.__createLoaderFile()
 
     # SECTION: File creation
@@ -280,7 +302,31 @@ class GLLoader:
         f_name: str = g_settings['output']
 
         with open(f_name, 'w') as f:
-            pass
+            f.write(self._t_loader)
+
+    def __resolveTemplates(self):
+        # Firstly, we're reading all the template files...
+        with open('./templates/api-def.txt', 'r') as f:
+            self._t_api_def = f.read().rstrip()
+
+        with open('./templates/api-dec.txt', 'r') as f:
+            self._t_api_dec = f.read().rstrip()
+
+        with open('./templates/api-static.txt', 'r') as f:
+            self._t_api_static = f.read().rstrip()
+
+        with open('./templates/loader.txt', 'r') as f:
+            self._t_loader = f.read().replace(
+                    '{_PROFILE_}', g_settings['profile']
+                ).replace(
+                    '{_VERSION_}', g_settings['version']
+                ).replace(
+                    '{_API_DEC_}', self._t_api_dec
+                ).replace(
+                    '{_API_DEF_}', self._t_api_def
+                ).replace(
+                    '{_API_STATIC_}', self._t_api_static
+                )
 
 
 # SECTION: Utilities
