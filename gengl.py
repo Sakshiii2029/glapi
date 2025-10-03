@@ -21,12 +21,13 @@ g_gl_version: list = [
     '4.0', '4.1', '4.2', '4.3', '4.4', '4.5', '4.6'
 ]
 
-g_shortopt: str = 'v:p:s:h'
-g_longopt: list = ['version=', 'profile=', 'source=', 'help']
+g_shortopt: str = 'v:p:i:o:h'
+g_longopt: list = ['version=', 'profile=', 'input=', 'output=', 'help']
 g_settings: dict = {
     'version':  '4.6',
     'profile':  'core',
-    'source':   './OpenGL-Registry/xml/gl.xml'
+    'input':    './OpenGL-Registry/xml/gl.xml',
+    'output':   './glapi.h'
 }
 
 
@@ -43,29 +44,32 @@ def GenGL_getopt():
             if arg in g_gl_version:
                 g_settings['version'] = arg
                 continue
+            GenGL_loge(f'invalid version: {arg}')
 
-            # fail state...
-            GenGL_loge('invalid version: {}'.format(arg))
-
-        if opt in ('-p', '--profile'):
+        elif opt in ('-p', '--profile'):
             if arg in g_gl_profile:
                 g_settings['profile'] = arg
                 continue
+            GenGL_loge(f'invalid profile: {arg}')
 
-            # fail state...
-            GenGL_loge('invalid profile: {}'.format(arg))
-
-        if opt in ('-s', '--source'):
+        elif opt in ('-i', '--input'):
             if os.path.exists(arg):
                 if os.path.basename(arg) == 'gl.xml':
-                    g_settings['profile'] = arg
+                    g_settings['input'] = arg
                     continue
-                else:
-                    GenGL_loge('invalid file: {}'.format(arg))
-            else:
-                GenGL_loge('argument isn\'t a valid path: {}'.format(arg))
+                GenGL_loge(f'invalid file: {arg}')
+            GenGL_loge(f'argument isn\'t a valid path: {arg}')
 
-        if opt in ('-h', '--help'):
+        elif opt in ('-o', '--output'):
+            if os.path.isdir(arg):
+                # we need to ensure that the path ends with a '/'
+                if not arg.endswith('/'):
+                    arg += '/'
+                g_settings['output'] = arg + 'glapi.h'
+                continue
+            GenGL_loge(f'not a directory: {arg}')
+
+        elif opt in ('-h', '--help'):
             print('help')
             sys.exit(0)
 
@@ -93,7 +97,7 @@ class GLSpec:
     def __init__(self):
         # opening an XML specification file
         try:
-            tree = ET.parse(g_settings['source'])
+            tree = ET.parse(g_settings['input'])
         except FileNotFoundError as err:
             print(err)
         root = tree.getroot()
@@ -257,11 +261,35 @@ class GLSpec:
         return (gl_func)
 
 
+# SECTION: Parser
+# # # # # # # # #
+
+class GLLoader:
+    # Private variables
+    # # # # # # # # # #
+    _spec: GLSpec = None
+
+    def __init__(self, spec: GLSpec):
+        self._spec = spec
+        self.__createLoaderFile()
+
+    # SECTION: File creation
+    # # # # # # # # # # # # #
+
+    def __createLoaderFile(self):
+        f_name: str = g_settings['output']
+
+        with open(f_name, 'w') as f:
+            pass
+
+
 # SECTION: Utilities
 # # # # # # # # # # #
 
 def GenGL_loge(msg: str):
-    print('{file}: {msg}'.format(file=os.path.basename(__file__), msg=msg))
+    f_name = os.path.basename(__file__)
+
+    print(f'{f_name}: {msg}')
     sys.exit(1)
 
 
@@ -273,12 +301,10 @@ if __name__ == '__main__':
     # # # # # # # # # # # # #
     GenGL_getopt()
 
-    # STEP 2.: Spec. loading
+    # STEP 2.: Spec. parsing
     # # # # # # # # # # # # #
     gl_spec: GLSpec = GLSpec()
 
-    # STEP 3.: File creation
+    # STEP 3.: Spec. loading
     # # # # # # # # # # # # #
-    f_name: str = 'glapi.h'
-    with open(f_name, 'w') as f:
-        pass
+    gl_load: GLLoader = GLLoader(gl_spec)
