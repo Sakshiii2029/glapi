@@ -34,7 +34,6 @@ GLAPI static void   *__glapiDefaultLoader(const char *name) {
     }
 
     return (symbol);
-}
 
 #  endif /* __linux__ */
 #  if defined (_WIN32)

@@ -121,6 +121,102 @@ class GLSpec:
         # self._gles2_feat_l = self.__parseFeatures(root, 'gles2')
         # self.__filterFeatures(self._gles2_feat_l)
 
+    # =========================================================================
+
+    def getVersionName(self, number: str):
+        if number not in g_gl_version:
+            return (None)
+        return (self._gl_feat_l[number]['name'])
+
+    def getDeclarationBlock(self):
+        type: str = self.getTypedefString().replace('#', '# ')
+        enum: str = self.getEnumString()
+        func: str = self.getFunctionString(True)
+        result: str = f'{type}\n{enum}\n{func}'
+
+        return (result)
+
+    def getTypedefString(self):
+        result: str = ''
+
+        for type in self.types:
+            if '#' in type:
+                if type.endswith(';'):
+                    type = type[:-1]
+
+            result = result + f'{type}\n'
+        return (result)
+
+    def getEnumString(self):
+        result: str = ''
+
+        for key in self.enums:
+            k_name: str = self.getVersionName(key)
+            k_line: str = f'# if defined ({k_name})\n'
+
+            result = result + k_line
+            for enum in self.enums[key]:
+                e_name: str = enum[0]
+                e_value: str = enum[1]
+                e_line: str = f'#  define {e_name} {e_value}\n'
+
+                result = result + e_line
+            k_line = f'# endif /* {k_name} */\n'
+            result = result + k_line
+        return (result)
+
+    def getFunctionString(self, extern: bool):
+        result: str = ''
+
+        for key in self.functions:
+            k_name: str = self.getVersionName(key)
+            k_line: str = f'# if defined ({k_name})\n\n'
+
+            result = result + k_line
+            # API typedefs...
+            if extern:
+                for func in self.functions[key]:
+                    f_name: str = func[0]
+                    f_type: str = func[1]['type']
+
+                    f_line: str = (f'typedef {f_type} '
+                                   f'(APIENTRY *PFN{f_name.upper()}PROC)'
+                                   f'(void);\n')
+                    result = result + f_line
+                result = result + '\n'
+
+            # API declarations...
+            for func in self.functions[key]:
+                f_name: str = func[0]
+
+                # before you ask, it's almost 11pm and I'm tired as hell
+                # i don't care about performance right now, i want it to work
+                if extern:
+                    f_line: str = (f'GLAPI '
+                                   f'PFN{f_name.upper()}PROC '
+                                   f'glapi_{f_name};\n')
+                else:
+                    f_line: str = (f'PFN{f_name.upper()}PROC '
+                                   f'glapi_{f_name};\n')
+                result = result + f_line
+
+            # API macros...
+            if extern:
+                result = result + '\n'
+                for func in self.functions[key]:
+                    f_name: str = func[0]
+
+                    f_line: str = (f'#  define '
+                                   f'{f_name} '
+                                   f'glapi_{f_name}\n')
+                    result = result + f_line
+            k_line = f'\n# endif /* {k_name} */\n'
+            result = result + k_line
+
+        if not extern:
+            result = result.replace('#', '# ')
+        return (result)
+
     # SECTION: Features
     # # # # # # # # # #
 
@@ -187,6 +283,8 @@ class GLSpec:
 
         for types in gl_type_l:
             for type in types:
+                if 'requires' in type.attrib.keys():
+                    continue
                 if type.text and 'typedef' in type.text:
                     element: str = type.text
 
@@ -197,7 +295,6 @@ class GLSpec:
                             element += 'APIENTRY '
                         if child.tail:
                             element += child.tail.strip()
-                    element = re.sub(r'\s+', ' ', element).strip()
                     if not element.endswith(';'):
                         element += ';'
 
@@ -308,25 +405,36 @@ class GLLoader:
         # Firstly, we're reading all the template files...
         with open('./templates/api-def.txt', 'r') as f:
             self._t_api_def = f.read().rstrip()
-
         with open('./templates/api-dec.txt', 'r') as f:
             self._t_api_dec = f.read().rstrip()
-
         with open('./templates/api-static.txt', 'r') as f:
             self._t_api_static = f.read().rstrip()
-
         with open('./templates/loader.txt', 'r') as f:
-            self._t_loader = f.read().replace(
-                    '{_PROFILE_}', g_settings['profile']
-                ).replace(
-                    '{_VERSION_}', g_settings['version']
-                ).replace(
-                    '{_API_DEC_}', self._t_api_dec
-                ).replace(
-                    '{_API_DEF_}', self._t_api_def
-                ).replace(
-                    '{_API_STATIC_}', self._t_api_static
-                )
+            self._t_loader = f.read()
+
+        # Now we can apply the templates...
+        self._t_loader = self._t_loader.replace(
+            '{_PROFILE_}', g_settings['profile']
+        ).replace(
+            '{_VERSION_}', g_settings['version']
+        )
+
+        self._t_api_def = self._t_api_def.replace(
+            '{_GL_API_IMPL_}', '/* implementation */'
+        )
+        self._t_loader = self._t_loader.replace(
+            '{_GL_API_DEC_}', self._spec.getDeclarationBlock()
+        ).replace(
+            '{_GL_API_DEF_}', self._spec.getFunctionString(False)
+        )
+
+        self._t_loader = self._t_loader.replace(
+            '{_API_DEC_}', self._t_api_dec
+        ).replace(
+            '{_API_DEF_}', self._t_api_def
+        ).replace(
+            '{_API_STATIC_}', self._t_api_static
+        )
 
 
 # SECTION: Utilities

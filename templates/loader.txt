@@ -23,13 +23,21 @@
 #  define APIENTRY
 # endif /* APIENTRY */
 
+/* SECTION:
+ *  OpenGL API
+ * * * * * * */
+
 {_GL_API_DEC_}
+
+/* SECTION:
+ *  Loader API
+ * * * * * * */
 
 {_API_DEC_}
 
 /* SECTION:
  *  Implementation
- * */
+ * * * * * * * * */
 
 # if defined (GLAPI_IMPLEMENTATION)
 #  include <stdio.h>
@@ -44,9 +52,17 @@
 #   include <Windows.h>
 #  endif /* _WIN32 */
 
+/* SECTION:
+ *  Loader API
+ * * * * * * */
+
 {_API_STATIC_}
 
 {_API_DEF_}
+
+/* SECTION:
+ *  OpenGL API
+ * * * * * * */
 
 {_GL_API_DEF_}
 
