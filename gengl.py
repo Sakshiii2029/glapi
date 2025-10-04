@@ -7,7 +7,6 @@ import getopt
 
 # USED FOR: xml parsing
 import xml.etree.ElementTree as ET
-import re
 
 
 # SECTION: Settings
@@ -128,12 +127,44 @@ class GLSpec:
             return (None)
         return (self._gl_feat_l[number]['name'])
 
+    def getVersionBlock(self):
+        result: str = ''
+
+        for key in self._gl_feat_l:
+            name: str = self._gl_feat_l[key]['name']
+            d_line: str = f'# define {name}'
+
+            result = result + d_line + '\n'
+            if key == g_settings['version']:
+                break
+        return (result.rstrip())
+
     def getDeclarationBlock(self):
-        type: str = self.getTypedefString().replace('#', '# ')
         enum: str = self.getEnumString()
         func: str = self.getFunctionString(True)
-        result: str = f'{type}\n{enum}\n{func}'
+        result: str = f'{enum}\n{func}'
 
+        return (result)
+
+    # #  if defined (GL_VERSION_1_0)
+    # glClear = (PFNFLCLEARPROC) load("glClear");
+    # #  endif /* GL_VERSION_1_0 */
+    def getImplementationBlock(self):
+        result: str = ''
+
+        for key in self.functions:
+            k_name: str = self.getVersionName(key)
+            k_line0: str = f'# if defined ({k_name})\n'
+            k_line1: str = f'# endif /* {k_name} */\n'
+
+            result = result + k_line0
+            for func in self.functions[key]:
+                f_name: str = func[0]
+
+                f_line: str = (f'\tglapi_{f_name} = (PFN{f_name.upper()}PROC) '
+                               f'load("{f_name}");')
+                result = result + f_line + '\n'
+            result = result + k_line1
         return (result)
 
     def getTypedefString(self):
@@ -143,7 +174,6 @@ class GLSpec:
             if '#' in type:
                 if type.endswith(';'):
                     type = type[:-1]
-
             result = result + f'{type}\n'
         return (result)
 
@@ -170,48 +200,55 @@ class GLSpec:
 
         for key in self.functions:
             k_name: str = self.getVersionName(key)
-            k_line: str = f'# if defined ({k_name})\n\n'
+            k_line0: str = f'# if defined ({k_name})\n'
+            k_line1: str = f'# endif /* {k_name} */\n'
 
-            result = result + k_line
-            # API typedefs...
             if extern:
+                result = result + k_line0
                 for func in self.functions[key]:
+                    f_line: str = None
                     f_name: str = func[0]
+                    f_param: str = ''
                     f_type: str = func[1]['type']
+                    f_params: dict = func[1]['params']
 
-                    f_line: str = (f'typedef {f_type} '
-                                   f'(APIENTRY *PFN{f_name.upper()}PROC)'
-                                   f'(void);\n')
-                    result = result + f_line
-                result = result + '\n'
+                    for param in f_params:
+                        p_type = param[0]
+                        p_name = param[1]
+                        p_line = f'{p_type} {p_name}, '
 
-            # API declarations...
-            for func in self.functions[key]:
-                f_name: str = func[0]
+                        f_param = f_param + p_line
+                    if len(f_param) != 0:
+                        # trimming the last ', ' characters
+                        f_param = f_param[:-2]
+                    else:
+                        f_param = 'void'
 
-                # before you ask, it's almost 11pm and I'm tired as hell
-                # i don't care about performance right now, i want it to work
-                if extern:
-                    f_line: str = (f'GLAPI '
-                                   f'PFN{f_name.upper()}PROC '
-                                   f'glapi_{f_name};\n')
-                else:
-                    f_line: str = (f'PFN{f_name.upper()}PROC '
-                                   f'glapi_{f_name};\n')
-                result = result + f_line
+                    f_line = (f'typedef {f_type} '
+                              f'(APIENTRYP PFN{f_name.upper()}PROC)'
+                              f'({f_param});')
+                    result = result + f_line + '\n'
+                    f_line = (f'extern '
+                              f'PFN{f_name.upper()}PROC '
+                              f'glapi_{f_name};')
+                    result = result + f_line + '\n'
+                    f_line = (f'#  define '
+                              f'{f_name} '
+                              f'glapi_{f_name}')
+                    result = result + f_line + '\n\n'
+                result = result[:-1]
+                result = result + k_line1
 
-            # API macros...
-            if extern:
-                result = result + '\n'
+            else:
+                result = result + k_line0
                 for func in self.functions[key]:
+                    f_line: str = None
                     f_name: str = func[0]
 
-                    f_line: str = (f'#  define '
-                                   f'{f_name} '
-                                   f'glapi_{f_name}\n')
-                    result = result + f_line
-            k_line = f'\n# endif /* {k_name} */\n'
-            result = result + k_line
+                    f_line = (f'PFN{f_name.upper()}PROC '
+                              f'glapi_{f_name};')
+                    result = result + f_line + '\n'
+                result = result + k_line1
 
         if not extern:
             result = result.replace('#', '# ')
@@ -373,14 +410,15 @@ class GLLoader:
     # Private template files
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     # List of templates:
-    # > _PROFILE_       : OpenGL profile (g_settings['profile'])
-    # > _VERSION_       : OpenGL version (g_settings['version'])
-    # > _API_DEC_       : our own API definitions (api-dec.txt)
-    # > _API_DEF_       : our own API declarations (api-def.txt)
-    # > _API_STATIC_    : our own static functions (api-static.txt)
-    # > _GL_API_DEC_    : OpenGL api declarations (extern declarations)
-    # > _GL_API_DEF_    : OpenGL api definitions (regular declarations)
-    # > _GL_API_IMPL_   : implementation part of OpenGL loading
+    # > _PROFILE_           : OpenGL profile (g_settings['profile'])
+    # > _VERSION_           : OpenGL version (g_settings['version'])
+    # > _API_DEC_           : our own API definitions (api-dec.txt)
+    # > _API_DEF_           : our own API declarations (api-def.txt)
+    # > _API_STATIC_        : our own static functions (api-static.txt)
+    # > _GL_API_DEC_        : OpenGL api declarations (extern declarations)
+    # > _GL_API_DEF_        : OpenGL api definitions (regular declarations)
+    # > _GL_API_IMPL_       : implementation part of OpenGL loading
+    # > _GL_VERSION_DEF_    : OpenGL version macro definitions
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     _t_loader: str = None
     _t_api_def: str = None
@@ -420,9 +458,11 @@ class GLLoader:
         )
 
         self._t_api_def = self._t_api_def.replace(
-            '{_GL_API_IMPL_}', '/* implementation */'
+            '{_GL_API_IMPL_}', self._spec.getImplementationBlock()
         )
         self._t_loader = self._t_loader.replace(
+            '{_GL_VERSION_DEF_}', self._spec.getVersionBlock()
+        ).replace(
             '{_GL_API_DEC_}', self._spec.getDeclarationBlock()
         ).replace(
             '{_GL_API_DEF_}', self._spec.getFunctionString(False)

@@ -1,31 +1,28 @@
 #define GLAPI_IMPLEMENTATION
+#define GLAPI_VERBOSE
 #include "./../glapi.h"
 
 #include <GLFW/glfw3.h>
 
+static void *g_window;
 
 int main(void) {
-    void    *window;
+    if (!glfwInit()) { return (1); }
 
-    glfwInit();
-    window = glfwCreateWindow(800, 600, "glapi 1.0 - glfw 3.4 - hello, glapi!", 0, 0);
-    if (!window) {
-        return (1);
-    }
-    glfwMakeContextCurrent(window);
-
-    if (!glapiLoadGL()) {
-        glfwTerminate();
-        return (1);
-    }
+    g_window = glfwCreateWindow(800, 600, "glfw 3.4 - hello, glapi!", 0, 0);
+    glfwMakeContextCurrent(g_window);
+    
+    if (!glapiLoadGL()) { return (1); }
 
     glViewport(0, 0, 800, 600);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glClearColor(0.2, 0.2, 0.2, 1.0);
-    while (!glfwWindowShouldClose(window)) {
+    do {
+        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.1, 0.1, 0.1, 1.0);
+        glfwSwapBuffers(g_window);
         glfwPollEvents();
-        glfwSwapBuffers(window);
-    }
+    } while (!glfwWindowShouldClose(g_window));
 
+    glapiUnloadGL();
     glfwTerminate();
+    return (0);
 }

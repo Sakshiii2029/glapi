@@ -1,19 +1,30 @@
-/* glapi.h : single-header OpenGL API header and loader
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
- *  profile : {_PROFILE_}
- *  version : {_VERSION_}
+ *  glapi.h : single-header OpenGL API header and loader
  *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+ *      profile : {_PROFILE_}
+ *      version : {_VERSION_}
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #if defined (__cplusplus)
 # pragma once
 #endif /* __cplusplus */
 #if !defined (_glapi_h_)
 # define _glapi_h_
+# if defined (__gl_h_) || defined (__gl_glext_h_)
+#  error "glapi.h: detected OpenGL inclusion before this file."
+# endif /* __gl_h_ || __gl_glext_h_ */
+# define __gl_h_
+# define __gl_glext_h_
 #
 # if !defined (GLAPI)
 #  define GLAPI extern
 # endif /* GLAPI */
+#
+# if !defined (GLAPIS)
+#  define GLAPIS static inline
+# endif /* GLAPIS */
 #
 # if !defined (GLAPIENTRY)
 #  define GLAPIENTRY
@@ -22,10 +33,66 @@
 # if !defined (APIENTRY)
 #  define APIENTRY
 # endif /* APIENTRY */
+#
+# if !defined (APIENTRYP)
+#  define APIENTRYP APIENTRY *
+# endif /* APIENTRYP */
+#
+{_GL_VERSION_DEF_}
+#
+# include <stddef.h>
+# include <stdint.h>
 
 /* SECTION:
  *  OpenGL API
  * * * * * * */
+
+typedef unsigned int GLenum;
+typedef unsigned char GLboolean;
+typedef unsigned int GLbitfield;
+typedef void GLvoid;
+typedef signed char GLbyte;
+typedef short GLshort;
+typedef int GLint;
+typedef int GLclampx;
+typedef unsigned char GLubyte;
+typedef unsigned short GLushort;
+typedef unsigned int GLuint;
+typedef int GLsizei;
+typedef float GLfloat;
+typedef float GLclampf;
+typedef double GLdouble;
+typedef double GLclampd;
+typedef void *GLeglImageOES;
+typedef char GLchar;
+typedef char GLcharARB;
+
+# ifdef __APPLE__
+typedef void *GLhandleARB;
+# else
+typedef unsigned int GLhandleARB;
+# endif /* __APPLE__ */
+
+typedef unsigned short GLhalfARB;
+typedef unsigned short GLhalf;
+typedef GLint GLfixed;
+typedef ptrdiff_t GLintptr;
+typedef ptrdiff_t GLsizeiptr;
+typedef int64_t GLint64;
+typedef uint64_t GLuint64;
+typedef ptrdiff_t GLintptrARB;
+typedef ptrdiff_t GLsizeiptrARB;
+typedef int64_t GLint64EXT;
+typedef uint64_t GLuint64EXT;
+typedef struct __GLsync *GLsync;
+struct _cl_context;
+struct _cl_event;
+typedef void (APIENTRY *GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
+typedef void (APIENTRY *GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
+typedef void (APIENTRY *GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
+typedef void (APIENTRY *GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);
+typedef unsigned short GLhalfNV;
+typedef GLintptr GLvdpauSurfaceNV;
 
 {_GL_API_DEC_}
 
@@ -41,8 +108,6 @@
 
 # if defined (GLAPI_IMPLEMENTATION)
 #  include <stdio.h>
-#  include <stddef.h>
-#  include <stdint.h>
 #  include <stdlib.h>
 #  if defined (__linux__)
 #   include <dlfcn.h>
@@ -51,6 +116,22 @@
 #  if defined (_WIN32)
 #   include <Windows.h>
 #  endif /* _WIN32 */
+#
+#  if !defined (glapiLogInfo)
+#   if defined (GLAPI_VERBOSE) || defined (GLAPI_VERBOSE_INFO)
+#    define glapiLogInfo(...) (fprintf(stdout, "glapi.h: "__VA_ARGS__))
+#   else
+#    define glapiLogInfo(...)
+#   endif /* GLAPI_VERBOSE || GLAPI_VERBOSE INFO */
+#  endif /* glapiLogInfo */
+#
+#  if !defined (glapiLogError)
+#   if defined (GLAPI_VERBOSE) || defined (GLAPI_VERBOSE_ERROR)
+#    define glapiLogError(...) (fprintf(stderr, "glapi.h: "__VA_ARGS__))
+#   else
+#    define glapiLogError(...)
+#   endif /* GLAPI_VERBOSE || GLAPI_VRBOSE_ERROR */
+#  endif /* glapiLogError */
 
 /* SECTION:
  *  Loader API
@@ -65,6 +146,5 @@
  * * * * * * */
 
 {_GL_API_DEF_}
-
 # endif /* GLAPI_IMPLEMENTATION */
 #endif /* _glapi_h_ */

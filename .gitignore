@@ -13,3 +13,12 @@ venv/
 *.swo
 .vscode/
 .idea/
+
+# binaries
+
+*.out
+*.exe
+*.elf
+*.app
+*.o
+*.obj

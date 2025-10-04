@@ -1,6 +1,6 @@
 static void *g_handle = 0;
 
-GLAPI static void   *__glapiDefaultLoader(const char *name) { 
+GLAPIS void *__glapiDefaultLoader(const char *name) { 
     void    *symbol;
 
 #  if defined (__linux__)
@@ -22,18 +22,18 @@ GLAPI static void   *__glapiDefaultLoader(const char *name) {
         /* Null-check if dlopen fails for every NAME...
          * */
         if (!g_handle) {
+            glapiLogError("could not find a dynamic handle\n");
             return (0);
         }
     }
 
     /* Now we can load a symbol...
      * */
-    symbol = dlopen(g_handle, name);
+    symbol = dlsym(g_handle, name);
     if (!symbol) {
+        glapiLogError("could not find a symbol: %s\n", name);
         return (0);
     }
-
-    return (symbol);
 
 #  endif /* __linux__ */
 #  if defined (_WIN32)
@@ -46,4 +46,5 @@ GLAPI static void   *__glapiDefaultLoader(const char *name) {
 
 #  endif /* _WIN32 */
 
+    return (symbol);
 }
