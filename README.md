@@ -10,7 +10,7 @@ The project is divided to:
     - name: `glapi.h`
     - written in: `c99`
 
-## Getting started
+## Getting started:
 
 To use **glapi** we must generate a header file using a python script.
 Let's go step-by-step with process of getting the file!
@@ -42,9 +42,10 @@ $ python3 glapi.py
 
 If everything passes successfully, you should have a brand new `glapi.h` file in the current directory.
 
-## How does it work
+## How does it work?
 
 *NOTE(@itsYakub):*
+
 *This section is highly technical. You don't need to read this section.*
 
 <details>
@@ -237,15 +238,15 @@ To summarize:
 
 </details>
 
-## Credit
+## Credit:
 
 The credit must be given where it's needed. The main inspiration for this project was [glad](https://github.com/Dav1dde/glad), from which I borrowed the concept of XML parsing and templates.
 And the main source is [specification repository by KhronosGroup](https://github.com/KhronosGroup/OpenGL-Registry).
 
 Links:
 - [https://github.com/Dav1dde/glad](https://github.com/Dav1dde/glad)
-- [https://github.com/KhronosGroup/OpenGL-Registry](https://github.com/KhronosGroup/OpenGL-Registry);
+- [https://github.com/KhronosGroup/OpenGL-Registry](https://github.com/KhronosGroup/OpenGL-Registry)
 
-## Licence
+## Licence:
 
 This project is licenced with [GNU Lesser General Public License, version 3](./LICENCE).
