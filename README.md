@@ -10,6 +10,46 @@ The project is divided to:
     - name: `glapi.h`
     - written in: `c99`
 
+## Minimal example:
+
+```console
+$ python3 glapi.py
+$ 
+```
+```c
+#define GLAPI_IMPLEMENTATION
+#include "./../glapi.h"
+
+#include <GLFW/glfw3.h>
+
+static void *g_window;
+
+int main(void) {
+    if (!glfwInit()) { return (1); }
+
+    g_window = glfwCreateWindow(800, 600, "glfw 3.4 - hello, glapi!", 0, 0);
+    glfwMakeContextCurrent(g_window);
+    
+    if (!glapiLoadGL()) { return (1); }
+
+    glViewport(0, 0, 800, 600);
+    do {
+        glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.1, 0.1, 0.1, 1.0);
+        glfwSwapBuffers(g_window);
+        glfwPollEvents();
+    } while (!glfwWindowShouldClose(g_window));
+
+    glapiUnloadGL();
+    glfwTerminate();
+    return (0);
+}
+```
+```console
+$ cc -Wall -Wextra -Werror example.c -o example -lglfw3 -lm
+$
+```
+
 ## Getting started:
 
 To use **glapi** we must generate a header file using a python script.

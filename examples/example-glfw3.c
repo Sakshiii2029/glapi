@@ -1,5 +1,4 @@
 #define GLAPI_IMPLEMENTATION
-#define GLAPI_VERBOSE
 #include "./../glapi.h"
 
 #include <GLFW/glfw3.h>

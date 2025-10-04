@@ -275,7 +275,6 @@ class GLSpec:
         return (feat_l)
 
     def __filterFeatures(self, feat_l):
-        self.types = self._gl_type_l
         for key in feat_l:
             feats = feat_l[key]
             self.enums[key] = self.__filterList(
