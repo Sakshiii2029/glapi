@@ -30,34 +30,34 @@ g_settings: dict = {
 }
 
 
-def GenGL_getopt():
+def glapi_getopt():
     global g_settings
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], g_shortopt, g_longopt)
     except getopt.GetoptError as err:
-        GenGL_loge(err)
+        glapi_loge(err)
 
     for opt, arg in opts:
         if opt in ('-v', '--version'):
             if arg in g_gl_version:
                 g_settings['version'] = arg
                 continue
-            GenGL_loge(f'invalid version: {arg}')
+            glapi_loge(f'invalid version: {arg}')
 
         elif opt in ('-p', '--profile'):
             if arg in g_gl_profile:
                 g_settings['profile'] = arg
                 continue
-            GenGL_loge(f'invalid profile: {arg}')
+            glapi_loge(f'invalid profile: {arg}')
 
         elif opt in ('-i', '--input'):
             if os.path.exists(arg):
                 if os.path.basename(arg) == 'gl.xml':
                     g_settings['input'] = arg
                     continue
-                GenGL_loge(f'invalid file: {arg}')
-            GenGL_loge(f'argument isn\'t a valid path: {arg}')
+                glapi_loge(f'invalid file: {arg}')
+            glapi_loge(f'argument isn\'t a valid path: {arg}')
 
         elif opt in ('-o', '--output'):
             if os.path.isdir(arg):
@@ -66,7 +66,7 @@ def GenGL_getopt():
                     arg += '/'
                 g_settings['output'] = arg + 'glapi.h'
                 continue
-            GenGL_loge(f'not a directory: {arg}')
+            glapi_loge(f'not a directory: {arg}')
 
         elif opt in ('-h', '--help'):
             print('help')
@@ -81,15 +81,13 @@ class GLSpec:
     # # # # # # # # # #
     _xml_file: ET.ElementTree = None
     _gl_feat_l: list = []
-    _gles1_feat_l: list = []
-    _gles2_feat_l: list = []
-    _gl_type_l: list = []
+    # _gles1_feat_l: list = []
+    # _gles2_feat_l: list = []
     _gl_enum_l: dict = {}
     _gl_func_l: dict = {}
 
     # Public variables
     # # # # # # # # # #
-    types: dict = {}
     enums: dict = {}
     functions: dict = {}
 
@@ -102,7 +100,6 @@ class GLSpec:
         root = tree.getroot()
 
         # parsing types, enums and fuctions...
-        self._gl_type_l = self.__parseTypes(root)
         self._gl_enum_l = self.__parseEnum(root)
         self._gl_func_l = self.__parseFunc(root)
 
@@ -165,16 +162,6 @@ class GLSpec:
                                f'load("{f_name}");')
                 result = result + f_line + '\n'
             result = result + k_line1
-        return (result)
-
-    def getTypedefString(self):
-        result: str = ''
-
-        for type in self.types:
-            if '#' in type:
-                if type.endswith(';'):
-                    type = type[:-1]
-            result = result + f'{type}\n'
         return (result)
 
     def getEnumString(self):
@@ -261,7 +248,6 @@ class GLSpec:
         # specification:
         # ['number'] : {
         #   ['name'] : { version name },
-        #   ['type'] : { list of types },
         #   ['enum'] : { list of enums },
         #   ['func'] : { list of commands },
         # }
@@ -310,33 +296,6 @@ class GLSpec:
             if item in l0.keys():
                 result.append((item, l0[item]))
         return (result)
-
-    # SECTION: Types
-    # # # # # # # # #
-
-    def __parseTypes(self, root):
-        gl_types: list = []
-        gl_type_l: dict = root.findall('types')
-
-        for types in gl_type_l:
-            for type in types:
-                if 'requires' in type.attrib.keys():
-                    continue
-                if type.text and 'typedef' in type.text:
-                    element: str = type.text
-
-                    for child in type:
-                        if child.tag == 'name':
-                            element += child.text
-                        elif child.tag == 'apientry':
-                            element += 'APIENTRY '
-                        if child.tail:
-                            element += child.tail.strip()
-                    if not element.endswith(';'):
-                        element += ';'
-
-                    gl_types.append(element)
-        return (gl_types)
 
     # SECTION: Enums
     # # # # # # # # #
@@ -399,7 +358,7 @@ class GLSpec:
         return (gl_func)
 
 
-# SECTION: Parser
+# SECTION: Loader
 # # # # # # # # #
 
 class GLLoader:
@@ -480,7 +439,7 @@ class GLLoader:
 # SECTION: Utilities
 # # # # # # # # # # #
 
-def GenGL_loge(msg: str):
+def glapi_loge(msg: str):
     f_name = os.path.basename(__file__)
 
     print(f'{f_name}: {msg}')
@@ -493,7 +452,7 @@ def GenGL_loge(msg: str):
 if __name__ == '__main__':
     # STEP 1.: Option process
     # # # # # # # # # # # # #
-    GenGL_getopt()
+    glapi_getopt()
 
     # STEP 2.: Spec. parsing
     # # # # # # # # # # # # #
