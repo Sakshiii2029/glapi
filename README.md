@@ -3,10 +3,10 @@
 **glapi** is an OpenGL generator and loader which utilizes the latest specification standards published by KhronosGroup.
 
 The project is divided to:
-- Generator:
+- **Generator:**
     - name: `glapi.py`
     - written in: `python 3.11`
-- Single-header Loader:
+- **Single-header Loader:**
     - name: `glapi.h`
     - written in: `c99`
 
@@ -14,9 +14,11 @@ The project is divided to:
 
 ```console
 $ python3 glapi.py
-$ 
 ```
 ```c
+/* cc -Wall -Wextra -Werror example.c -o example -lglfw3 -lm
+ * */
+
 #define GLAPI_IMPLEMENTATION
 #include "./../glapi.h"
 
@@ -45,10 +47,6 @@ int main(void) {
     return (0);
 }
 ```
-```console
-$ cc -Wall -Wextra -Werror example.c -o example -lglfw3 -lm
-$
-```
 
 ## Getting started:
 
@@ -58,8 +56,10 @@ Let's go step-by-step with process of getting the file!
 ### 0. Prerequesites:
 
 Ensure that you've the latest versions of the listed software installed on your system:
-- [git](https://git-scm.com/) - version control system;
-- [python3](https://www.python.org/) - latest python interpreter;
+- **[git](https://git-scm.com/);**
+- **[python3](https://www.python.org/);**
+- **terminal emulator;**
+- **internet connection;**
 
 ### 1. Cloning from remote git repository:
 
@@ -84,15 +84,10 @@ If everything passes successfully, you should have a brand new `glapi.h` file in
 
 ## How does it work?
 
-*NOTE(@itsYakub):*
-
-*This section is highly technical. You don't need to read this section.*
-
 <details>
-<summary>Details here:</summary>
+<summary>Details here:</summary><br>
 
-Okay, to understand how the generator works, let's take a look at the entrypoint:
-
+Firstly, let's take a look at the entrypoint of the script:
 ```py
 # SECTION: Entrypoint
 # # # # # # # # # # #
@@ -110,182 +105,78 @@ if __name__ == '__main__':
     # # # # # # # # # # # # #
     gl_load: GLLoader = GLLoader(gl_spec)
 ```
+It's divided into 3 steps:
+1. Option processing;
+2. Specification parsing using `GLSpec` class;
+3. Loader creation using `GLLoader` class;
 
-Entrypoint is divided into 3 steps:
-- Option processing;
-- Loading and parsing the OpenGL specification;
-- Generating an OpenGL loader based on the specification object;
+To not get too deep into how the inner workings are designed, let's just talk about how each component work and talk to each other.
 
-Let's start with the Option processing.
-It uses the basic python's `getopt` module, which gives a c-style option processing.
-The list of options that we're looking for is listed by using:
-
-```console
-$ python3 glapi.py --help
-```
-
-This simple command should give you a brief summary of what can be done using `glapi.py`,
-including the restrictions required for the proper workflow of the script.
-
-Options are stored in the global variable dictionary: `g_settings`:
-
+The first step, option processing, is simply a getopt operation performed using built-in `getopt` module for python.
+It allows us to set an OpenGL version: `-v, --version`, profile: `-p, --profile`, where the specification is stored: `-i, --input` and where the loader will be created: `-o, --output`.
+Each option value is stored in the global `g_settings` dictionary:
 ```py
+# `g_script_path` defined above...
+
 g_settings: dict = {
     'version':  '4.6',
     'profile':  'core',
-    'input':    './OpenGL-Registry/xml/gl.xml',
-    'output':   './glapi.h'
+    'input':    f'{g_script_path}/OpenGL-Registry/xml/gl.xml',
+    'output':   f'{g_script_path}/glapi.h'
 }
 ```
 
-Later on in the program we'll access this fields a lot of times.
+Now let's move to the `GLSpec` class. It's workflow is pretty straightforward:
+1. Open the `gl.xml` specification file;
+2. Read every value from `<enums>` block of the file and store its values in the private dictionary: `_gl_enum_l`;
+4. Read every value from `<commands>` block of the file and store its values in the private dictionary: `_gl_func_l`;
+5. Read every value from `<feature>` block of the file and store its values in the private dictionary: `_gl_feat_l`;
+6. Iterate over the every element of `_gl_feat_l` and extract the OpenGL version name (i.e. `'1.0'` == `'GL_VERSION_1_0'`), matching enums from `_gl_enum_l` and matching functions from `_gl_func_l` until we reach the highest version of OpenGL specified by the `g_settings['version']` setting.
+7. The results of the filterings are stored in public dictionaries `enums` and `functions`.
+And that's basically almost all the `GLSpec` class does. Almost, but we'll get to that.
 
+Now, last step and the `GLLoader` class. Like the name sugests, it creates the `glapi.h` loader file.
+The loader is constructed using template strings which you can easly find by searching for text: `SECTION: Templates`.
+There're a few key aspects of this template design:
+1. The template string used in this step are:
+   - `g_template_loader`: The base of the loader, where all the other templates will be placed;
+   - `g_template_api_dec`: Template for declarations of the loader's functions;
+   - `g_template_api_def`: Template for definitions of loader's functions;
+   - `g_template_api_static`: Template for static components of the loader;
+2. The placeholder specification: ` {_PLACEHOLDER_} `
+3. List of placeholders:
+   - `_PROFILE_`: OpenGL profile (`g_settings['profile']`);
+   - `_VERSION_`: OpenGL version (`g_settings['version']`);
+   - `_API_DEC_`: API declarations placeholder (`g_template_api_dec`);
+   - `_API_DEF_`: API definitions placeholder (`g_template_api_def`);
+   - `_API_STATIC_`: API static section placeholder (`g_template_api_static`);
+   - `_GL_API_DEC_`: OpenGL API declarations (typedefs, enums and extern declarations);
+   - `_GL_API_DEF_`: OpenGL API definitions;
+   - `_GL_API_IMPL_`: implementation part of OpenGL loading;
+   - `_GL_VERSION_DEF_`: OpenGL version macro definitions;
 
+With that said, let's go over the process of creating a loader:
+1. We're assigning a reference to the `GLSpec` object in our `GLLoader`;
+2. We start to resolve templates:
+   - `GLLoader` has a private member variables for the templates;
+   - We're going to perform a placeholder replacement using `str.replace()` built-in python function;
+   - Some placeholder, such as `_GL_API_DEC_`, `_GL_API_DEF_` and `_GL_VERSION_DEF_` are code-generated. This code is generated using `GLSpec` because it already stores all the filtered arrays of entries;
+   - All the templates are mashed together into the final `_t_loader` template string;
+3. We're creating a file at the location `g_settings['output']` in the `write` mode.
+4. We stream the content of the `t_loader` string to the file.
 
-There's not that much to say about the option processing so let's move to specification parsing!
-For that step we have a special class: `GLSpec`. It contains several dictionaries for extracted enums and functions.
-
-Let's take a look at the members of this class:
-
-```py
-# Private variables
-# # # # # # # # # #
-_xml_file: ET.ElementTree = None
-_gl_feat_l: list = []
-_gl_enum_l: dict = {}
-_gl_func_l: dict = {}
-
-# Public variables
-# # # # # # # # # #
-enums: dict = {}
-functions: dict = {}
-```
-
-Each of this member has it's special meaning in the whole workflow of the parser.
-Firsly, let's focus on the private field.
-
-`_xml_file` is self-explainatory: it is a variable where the whole XML Tree is stored.
-
-`_gl_feat_l` is a list of extracted features from the `<feature>` block in `gl.xml`.
-It's specification looks like:
-
-```py
-['number'] : {
-    ['name'] : { version name },
-    ['enum'] : { list of enums },
-    ['func'] : { list of commands },
-}
-```
-
-Each field of this list is based on the version number, as string.
-Every number matches very version of OpenGL ['1.0' - '4.6'].
-It makes sense then every field of this value is version-specific to the specification:
-- `'name'` stores the name of the version. It is pretty simple: '1.0' -> 'GL_VERSION_1_0';
-- `'enum'` stores the list of enum names (only);
-- `'func'` stores the list of function names (only);
-
-`_gl_enum_l` is the key-value list of every enum from the specification.
-The list is version-independent. The specification looks like:
-
-```py
-['name'] : { value }
-```
-
-Simple, right? We use the name of the enum as the key and the value is the literal numerical value.
-
-`_gl_func_l` is the key-value list of every function from the specification.
-The list is version-independent. The specification looks like:
-
-```py
-['name'] : {
-    ['type'] : { return type },
-    ['params'] : {
-        ['name'] : { type },
-    }
-}
-```
-
-This one is more complicated than the `_gl_enum_l`. The name of the function is used as the key.
-The value-dictionary has several entries:
-- `'type'` for return type of the function;
-- `'params'` for the dictionary of the parameters, working similarly as the `_gl_enum_l`;
-
-Now let's move to the public members of the class.
-The values stored in those dictionaries are version-separated tupples of keys and values.
-There's not really a specific reason why I chose tupples for this job.
-The main reason was siplicity it gave for building the blocks of code, but about that later.
-
-In other words, `enums` and `functions` are key-value dictionaries, where the key is the version of OpenGL
-and the value is the tupple of the keys and values (yes, it needs some refactoring or rewording).
-
-
-
-Huh, that was quite a lot of informations. Let's move to another, the last step of the generations.
-This step is creating the loader itself. For that we're using another class: `GLLoader`.
-
-This class has a few private members we should take a look at:
-
-```py
-# Private variables
-# # # # # # # # # #
-_spec: GLSpec = None
-_t_loader: str = None
-_t_api_def: str = None
-_t_api_dec: str = None
-_t_api_static: str = None
-```
-
-First member, `_spec`, is just a reference to the `GLSpec` object, simple.
-Now let's take a look at the other members. the *'t'* in their names stand for *"template"*.
-
-Yes, now we'll use some templates to generate a loader. These templates can be found in [templates/](./templates/) directory.
-To explain them briefly:
-- [./templates/api-dec.txt](api-dec.txt) - template for declarations of the loader's API.
-- [./templates/api-def.txt](api-def.txt) - template for definitions of the loader's API.
-- [./templates/api-static.txt](api-static.txt) - template for internal static loader's API.
-- [./templates/loader.txt](loader.txt) - the main template for the structure of the loader.
-
-Each template has the special fields that are placeholder for some text. They follow this convention: {_PLACEHOLDER_}
-And there we have the complete list of every placeholder and their meaning:
-```py
-# List of templates:
-# > _PROFILE_           : OpenGL profile (g_settings['profile'])
-# > _VERSION_           : OpenGL version (g_settings['version'])
-# > _API_DEC_           : our own API definitions (api-dec.txt)
-# > _API_DEF_           : our own API declarations (api-def.txt)
-# > _API_STATIC_        : our own static functions (api-static.txt)
-# > _GL_API_DEC_        : OpenGL api declarations (extern declarations)
-# > _GL_API_DEF_        : OpenGL api definitions (regular declarations)
-# > _GL_API_IMPL_       : implementation part of OpenGL loading
-# > _GL_VERSION_DEF_    : OpenGL version macro definitions
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-```
-
-So now the process of creating the loader looks like that:
-- we're opening every template file and store their content in the class's member variable;
-- if the string contains the placeholder, we need to replace it using `str.replace()` function;
-- if the placeholder cannot be replaced with the file template, we need to generate the string template using code.
-This is performed by the GLSpec class, especially by: `GLSpec.getVersionBlock()`, `GLSpec.getDeclarationBlock()`, `GLSpec.getImplementationBlock()` and `GLSpec.getFunctionString()`;
-- the expanded template `_t_loader` is then written into the loader file itself.
-
-And that's briefly what is happening.
 To summarize:
-- we're processing the options passed to the program;
-- we're parsing the XML specification file;
-- we're opening special template files;
-- we're replacing placeholder strings by template files and strings;
-- we're writing the final output to the loader file.
-
+1. We get the options passed to the program.
+2. We parse the given specification XML file.
+3. We filter the parsed data based on the desired OpenGL version.
+4. We process the template strings to create a final loader string.
+5. We stream the loader string to the loader file.
 </details>
 
 ## Credit:
 
-The credit must be given where it's needed. The main inspiration for this project was [glad](https://github.com/Dav1dde/glad), from which I borrowed the concept of XML parsing and templates.
-And the main source is [specification repository by KhronosGroup](https://github.com/KhronosGroup/OpenGL-Registry).
-
-Links:
-- [https://github.com/Dav1dde/glad](https://github.com/Dav1dde/glad)
-- [https://github.com/KhronosGroup/OpenGL-Registry](https://github.com/KhronosGroup/OpenGL-Registry)
+- **[Dav1dde/glad](https://github.com/Dav1dde/glad)**
+- **[KhronosGroup/OpenGL-Registry](https://github.com/KhronosGroup/OpenGL-Registry)**
 
 ## Licence:
 
