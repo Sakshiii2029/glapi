@@ -6,12 +6,22 @@
 static void *g_window;
 
 int main(void) {
-    if (!glfwInit()) { return (1); }
+    if (!glfwInit()) {
+        return (1);
+    }
 
     g_window = glfwCreateWindow(800, 600, "glfw 3.4 - hello, glapi!", 0, 0);
+    if (!g_window) {
+        glfwTerminate();
+        return (1);
+    }
+
     glfwMakeContextCurrent(g_window);
     
-    if (!glapiLoadGL()) { return (1); }
+    if (!glapiLoadGL()) {
+        glfwTerminate();
+        return (1);
+    }
 
     glViewport(0, 0, 800, 600);
     do {
