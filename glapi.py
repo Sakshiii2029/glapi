@@ -182,7 +182,7 @@ GLAPI int   glapiUnloadGL(void);
 
 g_template_api_def: str = '''
 GLAPI int   glapiLoadGL(void) {
-    return (glapiLoadGLLoader(__glapiDefaultLoader));
+    return (glapiLoadGLLoader((glapiLoadProc_t) __glapiDefaultLoader));
 }
 
 GLAPI int   glapiLoadGLLoader(void *(*load)(const char *)) {
@@ -264,6 +264,8 @@ GLAPIS void *__glapiDefaultLoader(const char *name) {
 # SECTION: Settings
 # # # # # # # # # #
 
+g_script_path: str = os.path.dirname(__file__)
+
 g_gl_profile: list = ['core', 'compatibility']
 g_gl_version: list = [
     '1.0', '1.1', '1.2', '1.3', '1.4', '1.5',
@@ -277,12 +279,34 @@ g_longopt: list = ['version=', 'profile=', 'input=', 'output=', 'help']
 g_settings: dict = {
     'version':  '4.6',
     'profile':  'core',
-    'input':    './OpenGL-Registry/xml/gl.xml',
-    'output':   './glapi.h'
+    'input':    f'{g_script_path}/OpenGL-Registry/xml/gl.xml',
+    'output':   f'{g_script_path}/glapi.h'
 }
 
-g_help_msg: str = '''
-help
+g_help_msg: str = f'''
+glapi.py - OpenGL loader generator written in python 3.11.
+
+Usage: python3 glapi.py <options>...
+   of: python glapi.py <options>...
+   or: ./glapi.py <options>...
+
+Options:
+
+    -h, --help              show this help message and exit.
+    -v, --version=<value>   set the OpenGL version used by the loader:
+                            > default: 4.6;
+                            > acceptable literals:
+                                [ 1.0, 1.1, 1.2, 1.3, 1.4,
+                                  1.5, 2.0, 2.1, 3.0, 3.1,
+                                  3.2, 3.3, 4.0, 4.1, 4.2,
+                                  4.3, 4.4, 4.5, 4.6 ];
+    -p, --profile=<value>   set the OpenGL procile used by the loader:
+                            > default: core;
+                            > accepable literals: [ core, compatibility ];
+    -i, --input=<value>     set the path to the OpenGL specification xml file:
+                            > default: {g_settings['input']}
+    -o, --output=<value>    set the path where OpenGL loader will be created:
+                            > default: {g_settings['output']}
 '''
 
 
@@ -296,24 +320,29 @@ def glapi_getopt():
 
     for opt, arg in opts:
         if opt in ('-v', '--version'):
-            if arg in g_gl_version:
-                g_settings['version'] = arg
-                continue
-            glapi_loge(f'invalid version: {arg}')
+            if arg not in g_gl_version:
+                glapi_loge(f'{opt}: invalid version: {arg}')
+            g_settings['version'] = arg
 
         elif opt in ('-p', '--profile'):
-            if arg in g_gl_profile:
-                g_settings['profile'] = arg
-                continue
-            glapi_loge(f'invalid profile: {arg}')
+            if arg not in g_gl_profile:
+                glapi_loge(f'{opt}: invalid profile: {arg}')
+            g_settings['profile'] = arg
 
         elif opt in ('-i', '--input'):
-            if os.path.exists(arg):
-                if os.path.basename(arg) == 'gl.xml':
-                    g_settings['input'] = arg
-                    continue
-                glapi_loge(f'invalid file: {arg}')
-            glapi_loge(f'argument isn\'t a valid path: {arg}')
+            if not os.path.exists(arg):
+                glapi_loge(f'{opt}: invalid path: {arg}')
+
+            if os.path.basename(arg) != 'gl.xml':
+                # we need to ensure that the path ends with a '/'
+                if not arg.endswith('/'):
+                    arg += '/'
+
+                if not os.path.exists(arg + 'gl.xml'):
+                    glapi_loge(f'{opt}: invalid path: {arg}')
+                arg = arg + 'gl.xml'
+
+            g_settings['input'] = arg
 
         elif opt in ('-o', '--output'):
             if os.path.isdir(arg):
@@ -321,8 +350,11 @@ def glapi_getopt():
                 if not arg.endswith('/'):
                     arg += '/'
                 g_settings['output'] = arg + 'glapi.h'
-                continue
-            glapi_loge(f'not a directory: {arg}')
+
+            else:
+                if os.path.basename(arg) != 'glapi.h':
+                    glapi_loge(f'{opt}: invalid path: {arg}')
+                g_settings['input'] = arg
 
         elif opt in ('-h', '--help'):
             print(g_help_msg.strip())
