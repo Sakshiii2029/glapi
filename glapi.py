@@ -340,7 +340,7 @@ def glapi_getopt():
 
                 if not os.path.exists(arg + 'gl.xml'):
                     glapi_loge(f'{opt}: invalid path: {arg}')
-                arg = arg + 'gl.xml'
+                arg += 'gl.xml'
 
             g_settings['input'] = arg
 
@@ -419,7 +419,7 @@ class GLSpec:
             name: str = self._gl_feat_l[key]['name']
             d_line: str = f'# define {name}'
 
-            result = result + d_line + '\n'
+            result += d_line + '\n'
             if key == g_settings['version']:
                 break
         return (result.rstrip())
@@ -442,14 +442,14 @@ class GLSpec:
             k_line0: str = f'# if defined ({k_name})\n'
             k_line1: str = f'# endif /* {k_name} */\n'
 
-            result = result + k_line0
+            result += k_line0
             for func in self.functions[key]:
                 f_name: str = func[0]
 
                 f_line: str = (f'\tglapi_{f_name} = (PFN{f_name.upper()}PROC) '
                                f'load("{f_name}");')
-                result = result + f_line + '\n'
-            result = result + k_line1
+                result += f_line + '\n'
+            result += k_line1
         return (result)
 
     def getEnumString(self):
@@ -465,9 +465,9 @@ class GLSpec:
                 e_value: str = enum[1]
                 e_line: str = f'#  define {e_name} {e_value}\n'
 
-                result = result + e_line
+                result += e_line
             k_line = f'# endif /* {k_name} */\n'
-            result = result + k_line
+            result += k_line
         return (result)
 
     def getFunctionString(self, extern: bool):
@@ -484,13 +484,15 @@ class GLSpec:
                     f_line: str = None
                     f_name: str = func[0]
                     f_param: str = ''
-                    f_type: str = func[1]['type']
+                    f_type: str = func[1]['type'].strip()
                     f_params: dict = func[1]['params']
 
                     for param in f_params:
-                        p_type = param[0]
-                        p_name = param[1]
-                        p_line = f'{p_type} {p_name}, '
+                        p_type = param[0].strip()
+                        # Obsolete:
+                        # p_name = param[1].strip()
+                        # p_line = f'{p_type} {p_name}, '
+                        p_line = f'{p_type}, '
 
                         f_param = f_param + p_line
                     if len(f_param) != 0:
@@ -502,17 +504,17 @@ class GLSpec:
                     f_line = (f'typedef {f_type} '
                               f'(APIENTRYP PFN{f_name.upper()}PROC)'
                               f'({f_param});')
-                    result = result + f_line + '\n'
+                    result += f_line + '\n'
                     f_line = (f'extern '
                               f'PFN{f_name.upper()}PROC '
                               f'glapi_{f_name};')
-                    result = result + f_line + '\n'
+                    result += f_line + '\n'
                     f_line = (f'#  define '
                               f'{f_name} '
                               f'glapi_{f_name}')
-                    result = result + f_line + '\n\n'
+                    result += f_line + '\n\n'
                 result = result[:-1]
-                result = result + k_line1
+                result += k_line1
 
             else:
                 result = result + k_line0
@@ -522,8 +524,8 @@ class GLSpec:
 
                     f_line = (f'PFN{f_name.upper()}PROC '
                               f'glapi_{f_name};')
-                    result = result + f_line + '\n'
-                result = result + k_line1
+                    result += f_line + '\n'
+                result += k_line1
 
         if not extern:
             result = result.replace('#', '# ')
@@ -619,25 +621,33 @@ class GLSpec:
             for cmd in cmds:
                 proto = cmd.find('proto')
                 param = cmd.findall('param')
-                name0: str = None
-                type0: str = None
+                name0: str = ''
+                type0: str = ''
                 params: list = []
 
+                if proto.text:
+                    type0 += proto.text
                 for child in proto:
                     if child.tag == 'name':
                         name0 = child.text.strip()
                     elif child.tag == 'ptype':
-                        type0 = child.text.strip()
-                if type0 is None:
-                    type0 = proto.text.strip()
+                        type0 += child.text.strip()
+                        if child.tail:
+                            type0 += child.tail
 
+                # TODO(yakub):
+                #  Some parameters ignore parts outside <ptype> blocks
                 for par in param:
-                    type1: str = par.text
+                    type1: str = ''
                     name1: str = None
 
+                    if par.text:
+                        type1 += par.text
                     for child in par:
                         if child.tag == 'ptype':
-                            type1 = child.text
+                            type1 += child.text
+                            if child.tail:
+                                type1 += child.tail
                         elif child.tag == 'name':
                             name1 = child.text
                     params.append((type1, name1))
