@@ -18,15 +18,15 @@ int main(void) {
 
     glfwMakeContextCurrent(g_window);
     
-    if (!glapiLoadGL()) {
+    if (!glapiLoadGLLoader((glapiLoadProc_t) glfwGetProcAddress)) {
         glfwTerminate();
         return (1);
     }
 
     glViewport(0, 0, 800, 600);
     do {
-        glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.1, 0.1, 0.1, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
         glfwSwapBuffers(g_window);
         glfwPollEvents();
     } while (!glfwWindowShouldClose(g_window));

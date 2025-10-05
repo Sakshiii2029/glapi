@@ -9,6 +9,258 @@ import getopt
 import xml.etree.ElementTree as ET
 
 
+# SECTION: Templates
+# # # # # # # # # # #
+
+g_template_loader: str = '''
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *
+ *  glapi.h : single-header OpenGL API header and loader
+ *
+ *      profile : {_PROFILE_}
+ *      version : {_VERSION_}
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+#if defined (__cplusplus)
+# pragma once
+#endif /* __cplusplus */
+#if !defined (_glapi_h_)
+# define _glapi_h_
+# if defined (__gl_h_) || defined (__gl_glext_h_)
+#  error "glapi.h: detected OpenGL inclusion before this file."
+# endif /* __gl_h_ || __gl_glext_h_ */
+# define __gl_h_
+# define __gl_glext_h_
+#
+# if defined(_WIN32) && !defined(APIENTRY) && !defined(__CYGWIN__) && !defined(__SCITECH_SNAP__)
+#  if defined (WIN32_LEAN_AND_MEAN)
+#   define WIN32_LEAN_AND_MEAN 1
+#  endif /* WIN32_LEAN_AND_MEAN */
+#  include <windows.h>
+# endif /* _WIN32 && APIENTRY && __CYGWIN__ */
+#
+# if !defined (GLAPI)
+#  define GLAPI extern
+# endif /* GLAPI */
+#
+# if !defined (GLAPIS)
+#  define GLAPIS static inline
+# endif /* GLAPIS */
+#
+# if !defined (GLAPIENTRY)
+#  define GLAPIENTRY
+# endif /* GLAPIENTRY */
+#
+# if !defined (APIENTRY)
+#  define APIENTRY
+# endif /* APIENTRY */
+#
+# if !defined (APIENTRYP)
+#  define APIENTRYP APIENTRY *
+# endif /* APIENTRYP */
+#
+{_GL_VERSION_DEF_}
+#
+# include <stddef.h>
+# include <stdint.h>
+
+/* SECTION:
+ *  OpenGL API
+ * * * * * * */
+
+typedef unsigned int GLenum;
+typedef unsigned char GLboolean;
+typedef unsigned int GLbitfield;
+typedef void GLvoid;
+typedef signed char GLbyte;
+typedef short GLshort;
+typedef int GLint;
+typedef int GLclampx;
+typedef unsigned char GLubyte;
+typedef unsigned short GLushort;
+typedef unsigned int GLuint;
+typedef int GLsizei;
+typedef float GLfloat;
+typedef float GLclampf;
+typedef double GLdouble;
+typedef double GLclampd;
+typedef void *GLeglImageOES;
+typedef char GLchar;
+typedef char GLcharARB;
+
+# ifdef __APPLE__
+typedef void *GLhandleARB;
+# else
+typedef unsigned int GLhandleARB;
+# endif /* __APPLE__ */
+
+typedef unsigned short GLhalfARB;
+typedef unsigned short GLhalf;
+typedef GLint GLfixed;
+typedef ptrdiff_t GLintptr;
+typedef ptrdiff_t GLsizeiptr;
+typedef int64_t GLint64;
+typedef uint64_t GLuint64;
+typedef ptrdiff_t GLintptrARB;
+typedef ptrdiff_t GLsizeiptrARB;
+typedef int64_t GLint64EXT;
+typedef uint64_t GLuint64EXT;
+typedef struct __GLsync *GLsync;
+struct _cl_context;
+struct _cl_event;
+typedef void (APIENTRY *GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
+typedef void (APIENTRY *GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
+typedef void (APIENTRY *GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
+typedef void (APIENTRY *GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);
+typedef unsigned short GLhalfNV;
+typedef GLintptr GLvdpauSurfaceNV;
+
+{_GL_API_DEC_}
+
+/* SECTION:
+ *  Loader API
+ * * * * * * */
+
+{_API_DEC_}
+
+/* SECTION:
+ *  Implementation
+ * * * * * * * * */
+
+# if defined (GLAPI_IMPLEMENTATION)
+#  include <stdio.h>
+#  include <stdlib.h>
+#  if defined (__linux__)
+#   include <dlfcn.h>
+#   include <unistd.h>
+#  endif /* __linux__ */
+#  if defined (_WIN32)
+#   include <windows.h>
+#  endif /* _WIN32 */
+#
+#  if !defined (glapiLogInfo)
+#   if defined (GLAPI_VERBOSE) || defined (GLAPI_VERBOSE_INFO)
+#    define glapiLogInfo(...) (fprintf(stdout, "glapi.h: "__VA_ARGS__))
+#   else
+#    define glapiLogInfo(...)
+#   endif /* GLAPI_VERBOSE || GLAPI_VERBOSE INFO */
+#  endif /* glapiLogInfo */
+#
+#  if !defined (glapiLogError)
+#   if defined (GLAPI_VERBOSE) || defined (GLAPI_VERBOSE_ERROR)
+#    define glapiLogError(...) (fprintf(stderr, "glapi.h: "__VA_ARGS__))
+#   else
+#    define glapiLogError(...)
+#   endif /* GLAPI_VERBOSE || GLAPI_VRBOSE_ERROR */
+#  endif /* glapiLogError */
+
+/* SECTION:
+ *  Loader API
+ * * * * * * */
+
+{_API_STATIC_}
+
+{_API_DEF_}
+
+/* SECTION:
+ *  OpenGL API
+ * * * * * * */
+
+{_GL_API_DEF_}
+# endif /* GLAPI_IMPLEMENTATION */
+#endif /* _glapi_h_ */
+'''
+
+g_template_api_dec: str = '''
+typedef void    *(* glapiLoadProc_t) (const char *);
+
+GLAPI int   glapiLoadGL(void);
+GLAPI int   glapiLoadGLLoader(glapiLoadProc_t);
+GLAPI int   glapiUnloadGL(void);
+'''
+
+g_template_api_def: str = '''
+GLAPI int   glapiLoadGL(void) {
+    return (glapiLoadGLLoader(__glapiDefaultLoader));
+}
+
+GLAPI int   glapiLoadGLLoader(void *(*load)(const char *)) {
+
+{_GL_API_IMPL_}
+
+    return (1);
+}
+
+GLAPI int   glapiUnloadGL(void) {
+    if (!g_handle) {
+        return (1);
+    }
+
+#  if defined (__linux__)
+    dlclose(g_handle), g_handle = 0;
+#  endif /* __linux__ */
+#  if defined (_WIN32)
+
+#  endif /* _WIN32 */
+
+    return (1);
+}
+'''
+
+g_template_api_static: str = '''
+static void *g_handle = 0;
+
+GLAPIS void *__glapiDefaultLoader(const char *name) {
+    void    *symbol;
+
+#  if defined (__linux__)
+
+    const char  *NAMES[] = {
+        "libGL.so", "libGL.so.1", 0
+    };
+
+    /* Checking if handle is already loaded...
+     * */
+    if (!g_handle) {
+        for (size_t i = 0; NAMES[i]; i++) {
+            g_handle = dlopen(NAMES[i], RTLD_NOW | RTLD_GLOBAL);
+            if (g_handle) {
+                break;
+            }
+        }
+
+        /* Null-check if dlopen fails for every NAME...
+         * */
+        if (!g_handle) {
+            glapiLogError("could not find a dynamic handle\\n");
+            return (0);
+        }
+    }
+
+    /* Now we can load a symbol...
+     * */
+    symbol = dlsym(g_handle, name);
+    if (!symbol) {
+        glapiLogError("could not find a symbol: %s\\n", name);
+        return (0);
+    }
+
+#  endif /* __linux__ */
+#  if defined (_WIN32)
+
+    /* NOTE(yakub):
+     *  Here we're trusting microsoft that `HMODULE` is indeed `PVOID`.
+     *  And PVOID is indeed `void *`.
+     *  I'm giving a lot of trust in microsoft right now...
+     * */
+
+#  endif /* _WIN32 */
+
+    return (symbol);
+}
+'''
+
 # SECTION: Settings
 # # # # # # # # # #
 
@@ -28,6 +280,10 @@ g_settings: dict = {
     'input':    './OpenGL-Registry/xml/gl.xml',
     'output':   './glapi.h'
 }
+
+g_help_msg: str = '''
+help
+'''
 
 
 def glapi_getopt():
@@ -69,7 +325,7 @@ def glapi_getopt():
             glapi_loge(f'not a directory: {arg}')
 
         elif opt in ('-h', '--help'):
-            print('help')
+            print(g_help_msg.strip())
             sys.exit(0)
 
 
@@ -392,47 +648,34 @@ class GLLoader:
     # # # # # # # # # # # # #
 
     def __createLoaderFile(self):
-        f_name: str = g_settings['output']
-
-        with open(f_name, 'w') as f:
+        with open(g_settings['output'], 'w') as f:
             f.write(self._t_loader)
 
     def __resolveTemplates(self):
-        # Firstly, we're reading all the template files...
-        with open('./templates/api-def.txt', 'r') as f:
-            self._t_api_def = f.read().rstrip()
-        with open('./templates/api-dec.txt', 'r') as f:
-            self._t_api_dec = f.read().rstrip()
-        with open('./templates/api-static.txt', 'r') as f:
-            self._t_api_static = f.read().rstrip()
-        with open('./templates/loader.txt', 'r') as f:
-            self._t_loader = f.read()
+        self._t_api_static = g_template_api_static.strip()
+        self._t_api_dec = g_template_api_dec.strip()
 
-        # Now we can apply the templates...
-        self._t_loader = self._t_loader.replace(
+        self._t_api_def = g_template_api_def.replace(
+            '{_GL_API_IMPL_}', self._spec.getImplementationBlock()
+        ).strip()
+
+        self._t_loader = g_template_loader.replace(
             '{_PROFILE_}', g_settings['profile']
         ).replace(
             '{_VERSION_}', g_settings['version']
-        )
-
-        self._t_api_def = self._t_api_def.replace(
-            '{_GL_API_IMPL_}', self._spec.getImplementationBlock()
-        )
-        self._t_loader = self._t_loader.replace(
+        ).replace(
             '{_GL_VERSION_DEF_}', self._spec.getVersionBlock()
         ).replace(
             '{_GL_API_DEC_}', self._spec.getDeclarationBlock()
         ).replace(
             '{_GL_API_DEF_}', self._spec.getFunctionString(False)
-        )
-
-        self._t_loader = self._t_loader.replace(
+        ).replace(
             '{_API_DEC_}', self._t_api_dec
         ).replace(
             '{_API_DEF_}', self._t_api_def
         ).replace(
             '{_API_STATIC_}', self._t_api_static
-        )
+        ).strip()
 
 
 # SECTION: Utilities

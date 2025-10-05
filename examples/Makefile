@@ -3,7 +3,7 @@
 MK_ROOT		= $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 MK_EXT		=
 CC			= cc
-CFLAGS		= -Wall -Wextra -Werror
+CFLAGS		= -Wall -Wextra -Werror -ggdb3
 
 ifeq ($(OS),Windows_NT)
 	MK_EXT = .exe

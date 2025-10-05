@@ -35,7 +35,7 @@ int main(void) {
         return (1);
     }
 
-    if (!glapiLoadGL()) {
+    if (!glapiLoadGLLoader((glapiLoadProc_t) SDL_GL_GetProcAddress)) {
         SDL_GL_DestroyContext(g_context), g_context = 0;
         SDL_DestroyWindow(g_window), g_window = 0;
         SDL_Quit();
@@ -46,14 +46,14 @@ int main(void) {
     do {
         SDL_Event   event;
 
-        glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(0.1, 0.1, 0.1, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
         SDL_GL_SwapWindow(g_window);
 
         while (SDL_PollEvent(&event)) {
             switch (event.type) {
                 case (SDL_EVENT_QUIT): {
-                    g_exit = 1;
+                    goto exit;
                 } break;
 
                 case (SDL_EVENT_WINDOW_RESIZED): {
@@ -62,7 +62,9 @@ int main(void) {
             }
         }
     } while (!g_exit);
-    
+   
+exit:
+
     glapiUnloadGL();
     SDL_GL_DestroyContext(g_context), g_context = 0;
     SDL_DestroyWindow(g_window), g_window = 0;
