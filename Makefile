@@ -1,9 +1,10 @@
 # ========
 
 MK_ROOT		= $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
-SCRIPT		= $(MK_ROOT)glapi.py
+MK_NAME		= glapi
+SCRIPT		= $(MK_ROOT)$(MK_NAME).py
 SFLAGS		= --input=$(GL_INPUT) --output=$(GL_OUTPUT) --version=$(GL_VERSION) --profile=$(GL_PROFILE)
-TARGET		= $(MK_ROOT)glapi.h
+TARGET		= $(MK_ROOT)$(MK_NAME).h
 
 # ========
 
@@ -32,12 +33,15 @@ clean :
 .PHONY : install
 
 install : all
-	cp -f $(TARGET) /usr/local/include
+	mkdir /usr/local/include/glapi/
+	cp -f $(TARGET) /usr/local/include/$(MK_NAME)/
+	ln -s /usr/local/include/$(MK_NAME)/$(MK_NAME).h /usr/local/include/$(MK_NAME).h
 
 .PHONY : remove
 
 remove : clean
-	rm -f /usr/local/include/$(TARGET)
+	rm -rf /usr/local/include/$(MK_NAME)
+	rm -f /usr/local/include/$(MK_NAME).h
 
 .PHONY : examples
 
