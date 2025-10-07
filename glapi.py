@@ -173,16 +173,16 @@ typedef GLintptr GLvdpauSurfaceNV;
 '''
 
 g_template_api_dec: str = '''
-typedef void    *(* glapiLoadProc_t) (const char *);
+typedef void    *(* t_glapiLoadProc) (const char *);
 
 GLAPI int   glapiLoadGL(void);
-GLAPI int   glapiLoadGLLoader(glapiLoadProc_t);
+GLAPI int   glapiLoadGLLoader(t_glapiLoadProc);
 GLAPI int   glapiUnloadGL(void);
 '''
 
 g_template_api_def: str = '''
 GLAPI int   glapiLoadGL(void) {
-    return (glapiLoadGLLoader((glapiLoadProc_t) __glapiDefaultLoader));
+    return (glapiLoadGLLoader((t_glapiLoadProc) __glapiDefaultLoader));
 }
 
 GLAPI int   glapiLoadGLLoader(void *(*load)(const char *)) {
