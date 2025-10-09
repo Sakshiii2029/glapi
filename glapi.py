@@ -64,6 +64,11 @@ g_template_loader: str = '''
 #
 # include <stddef.h>
 # include <stdint.h>
+# if defined (__cplusplus)
+
+extern "C" {
+
+# endif
 
 /* SECTION:
  *  OpenGL API
@@ -128,6 +133,11 @@ typedef GLintptr GLvdpauSurfaceNV;
  *  Implementation
  * * * * * * * * */
 
+# if defined (__cplusplus)
+
+}
+
+# endif
 # if defined (GLAPI_IMPLEMENTATION)
 #  include <stdio.h>
 #  include <stdlib.h>
@@ -154,6 +164,11 @@ typedef GLintptr GLvdpauSurfaceNV;
 #    define glapiLogError(...)
 #   endif /* GLAPI_VERBOSE || GLAPI_VRBOSE_ERROR */
 #  endif /* glapiLogError */
+#  if defined (__cplusplus)
+
+extern "C" {
+
+#  endif
 
 /* SECTION:
  *  Loader API
@@ -168,6 +183,11 @@ typedef GLintptr GLvdpauSurfaceNV;
  * * * * * * */
 
 {_GL_API_DEF_}
+#  if defined (__cplusplus)
+
+}
+
+#  endif
 # endif /* GLAPI_IMPLEMENTATION */
 #endif /* _glapi_h_ */
 '''
