@@ -575,12 +575,24 @@ class GLSpec:
             feat_l[number]['enum']: list = []
             feat_l[number]['func']: list = []
 
+            def __isdup(item: str, field: str):
+                for prev_num, prev_feat in feat_l.items():
+                    if item in prev_feat[field]:
+                        return (True)
+                return (False)
+
             # get the list of enums for this version of gl...
             for enum in feat.findall('./require/enum'):
-                feat_l[number]['enum'].append(enum.attrib['name'])
+                e_name: str = enum.attrib['name']
+
+                if not __isdup(e_name, 'enum'):
+                    feat_l[number]['enum'].append(e_name)
             # get the list of commands for this version of gl...
             for cmd in feat.findall('./require/command'):
-                feat_l[number]['func'].append(cmd.attrib['name'])
+                f_name: str = cmd.attrib['name']
+
+                if not __isdup(f_name, 'func'):
+                    feat_l[number]['func'].append(f_name)
 
         return (feat_l)
 
